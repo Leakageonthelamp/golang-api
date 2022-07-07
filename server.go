@@ -13,11 +13,14 @@ import (
 var (
 	db             *gorm.DB                  = config.SetupDatabaseConnection()
 	userRepository repository.UserRepository = repository.NewUserRepository(db)
+	BookRepository repository.BookRepository = repository.NewBookRepository(db)
 	jwtService     service.JWTService        = service.NewJWTService()
 	userService    service.UserService       = service.NewUserService(userRepository)
 	authService    service.AuthService       = service.NewAuthService(userRepository)
+	bookService    service.BookService       = service.NewBookService(BookRepository)
 	authController controller.AuthController = controller.NewAuthController(authService, jwtService)
 	userController controller.UserController = controller.NewUserController(userService, jwtService)
+	bookController controller.BookController = controller.NewBookController(bookService, jwtService)
 )
 
 func main() {
@@ -33,6 +36,15 @@ func main() {
 	{
 		userRoutes.GET("/profile", userController.Profile)
 		userRoutes.PUT("/profile", userController.Update)
+	}
+
+	bookRoutes := r.Group("api/book", middleware.AuthorizeJWT(jwtService))
+	{
+		bookRoutes.GET("/", bookController.All)
+		bookRoutes.GET("/:id", bookController.FindByID)
+		bookRoutes.POST("/", bookController.Insert)
+		bookRoutes.PUT("/:id", bookController.Update)
+		bookRoutes.DELETE("/:id", bookController.Delete)
 	}
 
 	r.Run(":3000")
